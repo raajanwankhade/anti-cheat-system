@@ -1,4 +1,4 @@
-# Research Papers and Papers
+# Research Papers
 - 
 - 
 
