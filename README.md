@@ -1,1 +1,2 @@
 # anti-cheat-system
+Project Scheduling sheet can be accessed [here](https://docs.google.com/spreadsheets/d/1M3H_XTmmzuoArpvMM5G8-0eaWD3aG6TvwbEUpnkKnuk/edit?usp=sharing)
