@@ -7,3 +7,5 @@ Project Scheduling sheet can be accessed [here](https://docs.google.com/spreadsh
 * Mouth Tracking
 # Face Detection
 1. [HAAR Cascade](https://www.analyticsvidhya.com/blog/2022/04/object-detection-using-haar-cascade-opencv/)
+2. [DeepFace](https://viso.ai/computer-vision/deepface/)
+3. [DeepFace Repo](https://github.com/serengil/deepface)
