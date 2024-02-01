@@ -11,4 +11,4 @@
 
 # Other links
 - [OEP Dataset](http://cvlab.cse.msu.edu/oep-dataset.html)
-- 
+- [MediaPipe Iris: Real-time Iris Tracking & Depth Estimation](https://blog.research.google/2020/08/mediapipe-iris-real-time-iris-tracking.html)
