@@ -3,7 +3,7 @@ Project Scheduling sheet can be accessed [here](https://docs.google.com/spreadsh
 ## Modules covered here
 * Face Detection
 * Face Recognition
-* Hand Tracking
+* Eye Tracking
 * Mouth Tracking
 # Face Detection
 1. [HAAR Cascade](https://www.analyticsvidhya.com/blog/2022/04/object-detection-using-haar-cascade-opencv/)
