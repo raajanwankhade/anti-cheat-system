@@ -186,13 +186,14 @@ def calculate_zone(face_landmarks, image):
             return success, x, y, z, radius, text, colour_zone, nose_2d, nose_3d 
     return False, None, None, None, None, None, None, None, None
 
-
+#private
 def euclidean_distance(point1, point2):
     x1,y1 = point1.ravel()
     x2,y2 = point2.ravel()
     distance = math.sqrt((x2-x1)**2 + (y2-y1)**2)
     return distance
-
+    
+#private
 def iris_position(iris_center, right_point, left_point):
     center_to_right_dist = euclidean_distance(iris_center, right_point)
     total_distance = euclidean_distance(right_point, left_point)
@@ -205,7 +206,8 @@ def iris_position(iris_center, right_point, left_point):
     else:
         iris_position = 'left'
     return iris_position, ratio
-
+    
+#public
 def getIris(face_landmarks, image):
     img_h, img_w = image.shape[:2]
     mesh_points = np.array([np.multiply([p.x,p.y],[img_w,img_h]).astype(int)for p in face_landmarks[0].landmark])
@@ -216,4 +218,4 @@ def getIris(face_landmarks, image):
     llm = mesh_points[R_H_RIGHT][0]
     lrm = mesh_points[R_H_LEFT][0]
     iris_pos,ratio = iris_position(center_right, llm, lrm)
-    return iris_pos
+    return iris_pos, ratio
