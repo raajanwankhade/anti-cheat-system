@@ -3,6 +3,12 @@ import time
 import cv2
 from deepface import DeepFace
 import numpy as np
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+
+def numoffaces(frame):
+    grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(grey, scaleFactor=1.1, minNeighbors=5, minSize=(40, 40))
+    return len(faces)
 
 def enhance_frame(frame):
     alpha = 1.3
@@ -35,7 +41,7 @@ print("INITIALISING PROCTOR...")
 frame = None #global var
 examinee = input("Enter your name here: ")
 name = '' #global var
-
+msg = ''
 target = input("please put path to registered image: ")
 
 
@@ -60,7 +66,13 @@ target = frame
 
 
 def face_recog():
+    global frame, msg
     while True:
+        num = numoffaces(frame)
+        if num>1:
+            msg = "Multiple faces in hall"
+        else:
+            msg = "1 face"
         verify()
         # print(name)
         time.sleep(1)
@@ -76,6 +88,7 @@ while True:
         frame = cv2.flip(frame, 1)
         frame = enhance_frame(frame)
         cv2.putText(frame, name,(100,50),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 1)
+        cv2.putText(frame, msg,(50,100),cv2.FONT_HERSHEY_SIMPLEX,0.5, (0, 0, 255), 1)
         cv2.imshow("Proctor", frame)
         key = cv2.waitKey(1)
         if key == ord('q'):
