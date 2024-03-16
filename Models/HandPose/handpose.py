@@ -2,6 +2,7 @@ import cv2
 import math
 import mediapipe as mp
 from ultralytics import YOLO
+import torch
 import numpy as np 
 
 # Initialize Mediapipe Hands
@@ -9,16 +10,16 @@ mpHands = mp.solutions.hands
 hands = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 mpdraw = mp.solutions.drawing_utils
 model = YOLO('yolov8s.pt')
-
+#model = torch.hub.load('ultralytics/yolov5','custom', path='best.pt')
 # Function to calculate distance between two points in 2D space
 def calculate_distance(x1, y1, x2, y2):
     distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
     return distance
 
 # Data points for a cm calc
-x = [300, 245, 200, 170, 145, 130, 112, 103, 93, 87, 80, 75, 70, 67, 62, 59, 57]
-y = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
-coff = np.polyfit(x, y, 2)  # y = Ax^2 + Bx + C (fix this latr)
+# x = [30, 24, 20, 17, 14, 13, 11, 10, 9, 8, 8, 7, 7, 6, 6, 5, 5]
+# y = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+# coff = np.polyfit(x, y, 2)  # y = Ax^2 + Bx + C (fix this latr)
 
 # OpenCV code to capture video from the default camera
 cap = cv2.VideoCapture(0)
@@ -39,7 +40,7 @@ while True:
         if result.boxes:
             
             class_labels = result.boxes  # Assuming YOLO result has 'names' attribute
-            class_indices = [i for i, label in enumerate(class_labels) if model.names[int(label.cls)] == 'book']
+            class_indices = [i for i, label in enumerate(class_labels) if (model.names[int(label.cls)] == 'book') or model.names[int(label.cls)] == 'cell phone' ]
             yolo_bboxes.extend(result.boxes.xyxy.cpu().numpy().astype('int')[class_indices])
     
     results = hands.process(img)  # Process the frame with Mediapipe Hands
@@ -113,7 +114,7 @@ while True:
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
                     #cv2.putText(frame, f"{int(distance)}cm", (xmax - 80, ymin - 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 0), 2)
                 cv2.line(frame, (int(yolo_center[0]), int(yolo_center[1])), (int(hand_center[0]), int(hand_center[1])), (0, 255, 0), 2)
-                cv2.putText(frame, f"{int(distance)}cm", (xmax - 80, ymin - 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 0), 2)
+                cv2.putText(frame, f"{int(distance)/7.5}cm", (xmax - 80, ymin - 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 0), 2)
 
     
     # Display the frame with annotations
