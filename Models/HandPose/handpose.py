@@ -2,45 +2,39 @@ import cv2
 import math
 import mediapipe as mp
 from ultralytics import YOLO
-import numpy as np 
+import torch
 
-# Initialize Mediapipe Hands
-mpHands = mp.solutions.hands
-hands = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
-mpdraw = mp.solutions.drawing_utils
-model = YOLO('yolov8s.pt')
 
-# Function to calculate distance between two points in 2D space
+def initialize():
+    global mpHands, hands, mpdraw, device, model, mylmList
+
+    mpHands = mp.solutions.hands
+    hands = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    mpdraw = mp.solutions.drawing_utils
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = torch.hub.load('ultralytics/yolov5','custom', path='best.pt', force_reload=False).to(device)
+    mylmList = []
+
 def calculate_distance(x1, y1, x2, y2):
     distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
     return distance
 
-# Data points for a cm calc
-x = [300, 245, 200, 170, 145, 130, 112, 103, 93, 87, 80, 75, 70, 67, 62, 59, 57]
-y = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
-coff = np.polyfit(x, y, 2)  # y = Ax^2 + Bx + C (fix this latr)
 
-# OpenCV code to capture video from the default camera
-cap = cv2.VideoCapture(0)
-cap.set(3, 720)  # Set the width of the frame
-cap.set(4, 480)  # Set the height of the frame
-mylmList = []
-img_counter=0
 # Main loop to process video frames
-while True:
-    isopen, frame = cap.read()
+def handYOLO(frame):
+    output = {}
     frame = cv2.flip(frame, 1)  # Flip the frame horizontally
     img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert BGR image to RGB for Mediapipe processing
 
     detections = model(frame)
     yolo_bboxes = []
         
-    for result in detections:
-        if result.boxes:
-            
-            class_labels = result.boxes  # Assuming YOLO result has 'names' attribute
-            class_indices = [i for i, label in enumerate(class_labels) if model.names[int(label.cls)] == 'book']
-            yolo_bboxes.extend(result.boxes.xyxy.cpu().numpy().astype('int')[class_indices])
+    for detection in detections.pred[0]:
+        x1, y1, x2, y2, confidence, class_index = detection.tolist()
+        #if model.names[int(class_index)] in ['book', 'cell phone'   ]:
+        print(f"Confidence: {confidence} Class: {model.names[int(class_index)]}")
+        output['Prohibited Item'] = model.names[int(class_index)]
+        yolo_bboxes.append([int(x1), int(y1), int(x2), int(y2)])
     
     results = hands.process(img)  # Process the frame with Mediapipe Hands
     allHands = []
@@ -85,22 +79,8 @@ while True:
             cv2.rectangle(frame, (bbox[0] - 20, bbox[1] - 20), (bbox[0] + bbox[2] + 20, bbox[1] + bbox[3] + 20), (255, 0, 255), 2)
             cv2.putText(frame, myHand["type"], (bbox[0] - 30, bbox[1] - 30), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 255), 2)
     
-            # Calculate and display the distance between two specific landmarks of the hand
-            if mylmList != 0:
-                try:
-                    x, y = mylmList[5][1], mylmList[5][2]
-                    x2, y2 = mylmList[17][1], mylmList[17][2]
-                    dis = calculate_distance(x, y, x2, y2)
-         
-                    A, B, C = coff
-                    distanceCM = A * dis**2 + B * dis + C
-                    print(distanceCM)
-                    cv2.rectangle(frame, (xmax - 80, ymin - 80), (xmax + 20, ymin - 20), (255, 0, 255), cv2.FILLED)
-                    #cv2.putText(frame, f"{int(distanceCM)}cm", (xmax - 80, ymin - 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 0), 2)
-          
-                except:
-                    pass
         for hand in allHands:
+            output['hand_detected'] = True
             for yolo_bbox in yolo_bboxes:
                 
                 x1, y1, x2, y2 = yolo_bbox
@@ -108,18 +88,44 @@ while True:
 
                 hand_center = hand["center"]
                 distance = calculate_distance(yolo_center[0], yolo_center[1], hand_center[0], hand_center[1])
-                print(distance)
-                if distance < 100:
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                    #cv2.putText(frame, f"{int(distance)}cm", (xmax - 80, ymin - 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 0), 2)
-                cv2.line(frame, (int(yolo_center[0]), int(yolo_center[1])), (int(hand_center[0]), int(hand_center[1])), (0, 255, 0), 2)
-                cv2.putText(frame, f"{int(distance)}cm", (xmax - 80, ymin - 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 0), 2)
+                output['distance'] = distance
 
+                print(distance)
+                output['Prohibited Item Use'] = False
+                if distance < 200:
+                    output['Prohibited Item Use'] = True
+                    #cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                    #cv2.putText(frame, f"{int(distance)}cm", (xmax - 80, ymin - 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 0), 2)
+                #cv2.line(frame, (int(yolo_center[0]), int(yolo_center[1])), (int(hand_center[0]), int(hand_center[1])), (0, 255, 0), 2)
+                #cv2.putText(frame, f"{int(distance)/7.5}cm", (xmax - 80, ymin - 40), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 0), 2)
+    output['illegal_objects'] = len(yolo_bboxes)
+
+
+    return output
     
-    # Display the frame with annotations
-    cv2.imshow('ObjectToHand', frame)
+        # Display the frame with annotations
     
-    # Exit the loop if 'q' key is pressed
-    k = cv2.waitKey(1)
-    if cv2.waitKey(1) & 0xff==ord('q'):
-        break
+def inference(frame):
+    # Load the image
+    initialize()
+
+    # Run your functions
+    output = handYOLO(frame)
+
+    # Print the output
+    return output    
+def main(image_path):
+    # Load the image
+    frame = cv2.imread(image_path)
+
+    # Initialize the global variables
+    initialize()
+
+    # Run your functions
+    output = handYOLO(frame)
+
+    # Print the output
+    print(output)
+
+if __name__ == "__main__":
+    main('test.png')
