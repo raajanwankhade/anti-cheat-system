@@ -10,7 +10,7 @@ device = None
 model = None
 mylmList = []
 
-def initialize():
+def initialize(yolo_model, media_pipe):
     """
     Initializes the necessary components for the handpose module.
 
@@ -24,11 +24,15 @@ def initialize():
     """
     global mpHands, hands, mpdraw, device, model, mylmList
 
-    mpHands = mp.solutions.hands
-    hands = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    mpdraw = mp.solutions.drawing_utils
+    # mpHands = mp.solutions.hands
+    mpHands = media_pipe['mpHands']
+    # hands = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    hands = media_pipe['hands']
+    # mpdraw = mp.solutions.drawing_utils
+    mpdraw = media_pipe['mpdraw']
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = torch.hub.load('ultralytics/yolov5', 'custom', path='/home/kashyap/Documents/Projects/PROCTOR/anti-cheat-system/Proctor/YOLO_Weights/best.pt', force_reload=False).to(device) #update path here
+    #model = torch.hub.load('ultralytics/yolov5', 'custom', path='/home/kashyap/Documents/Projects/PROCTOR/anti-cheat-system/Proctor/YOLO_Weights/best.pt', force_reload=False).to(device) #update path here
+    model = yolo_model
     mylmList = []
 
 def initialize_camera():
@@ -163,7 +167,7 @@ def handYOLO(frame, model):
 
     return output
 
-def inference(frame):
+def inference(frame,yolo_model, media_pipe):
     """
     Perform hand pose inference on the given frame.
 
@@ -173,7 +177,7 @@ def inference(frame):
     Returns:
         The output of the hand pose inference.
     """
-    initialize()
+    initialize(yolo_model, media_pipe)
     output = handYOLO(frame, model)
     return output
 

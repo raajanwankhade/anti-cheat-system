@@ -5,11 +5,24 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 from joblib import dump
 from proctor import face_module  # Import the proctor function
+import torch
 import random
+import mediapipe as mp
+
 
 def load_dataset(dataset_path, sample_size=None, seed=42):
     X = []
     y = []
+    # uses old YOLO
+    '''Model Settings'''
+    media_pipe_dict = {}
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = torch.hub.load('ultralytics/yolov5', 'custom', path='/home/kashyap/Documents/Projects/PROCTOR/anti-cheat-system/Proctor/YOLO_Weights/best.pt', force_reload=False).to(device) #update path here
+    mpHands = mp.solutions.hands
+    media_pipe_dict['mpHands'] = mpHands
+    media_pipe_dict['hands'] = mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    media_pipe_dict['mpdraw'] = mp.solutions.drawing_utils
+
     id_photo_path = os.path.join(dataset_path, 'ID.png')
     
     if not os.path.exists(id_photo_path):
@@ -32,7 +45,7 @@ def load_dataset(dataset_path, sample_size=None, seed=42):
         all_frames = random.sample(all_frames, sample_size)
 
     for frame_path, label in all_frames:
-        proctor_output = face_module(frame_path, id_photo_path)
+        proctor_output = face_module(frame_path, id_photo_path, yolo_model=model, media_pipe=media_pipe_dict)
         
         # Convert proctor output to feature vector
         features = [
@@ -92,7 +105,7 @@ def save_model(model, filename):
 
 def main():
     dataset_path = "/home/kashyap/Documents/Projects/PROCTOR/anti-cheat-system/Proctor/Dataset"
-    X, y = load_dataset(dataset_path, 50)
+    X, y = load_dataset(dataset_path)
     
     if len(X) == 0:
         print("No valid data found. Please check your dataset.")

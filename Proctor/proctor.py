@@ -22,12 +22,12 @@ def enhance_frame(image):
     new = cv2.filter2D(src=image, ddepth=-1, kernel=kernel)
     return new
 
-def face_module(frame_path, target_path):
+def face_module(frame_path, target_path, yolo_model, media_pipe):
     '''
     Takes location as input of current frame from camera and the location of target image, and returns the output
     '''
     frame = cv2.imread(frame_path)
-    hand_dict = inference(frame)
+    hand_dict = inference(frame, yolo_model, media_pipe)
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     frame = cv2.flip(frame, 1)
