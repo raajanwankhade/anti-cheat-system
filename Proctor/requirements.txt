@@ -14,10 +14,6 @@ coverage==7.4.4
 cycler==0.12.1
 deepface==0.0.87
 dill==0.3.8
-Django==5.0.3
-django-cors-headers==4.3.1
-djangorestframework==3.15.0
-djangorestframework-simplejwt==5.3.1
 filelock==3.13.1
 fire==0.6.0
 Flask==3.0.2
