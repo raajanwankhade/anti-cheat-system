@@ -2,7 +2,12 @@ import cv2
 import mediapipe as mp
 import math
 import torch
-
+import os
+import warnings
+import logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+logging.getLogger('mediapipe').setLevel(logging.ERROR)
+warnings.filterwarnings("ignore", category=UserWarning)
 mpHands = None
 hands = None
 mpdraw = None
@@ -109,7 +114,7 @@ def handYOLO(frame, model):
         x1, y1, x2, y2, confidence, class_index = detection.tolist()
         output['prohibited_item'] = model.names[int(class_index)]
         yolo_bboxes.append([int(x1), int(y1), int(x2), int(y2)])
-     
+        output['illegal_objects'] += 1
 
     allHands = []
     h, w, c = frame.shape  # Get the height, width, and number of channels of the frame
@@ -163,7 +168,6 @@ def handYOLO(frame, model):
             if distance < 200:
                 output['Prohibited Item Use'] = True
 
-    output['illegal_objects'] = len(yolo_bboxes)
 
     return output
 
@@ -194,4 +198,3 @@ if __name__ == '__main__':
 
     cap.release()
     cv2.destroyAllWindows()
-
