@@ -2,15 +2,40 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
-
+import math
 
 # initialising MediaPipe FaceMesh
-mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh(min_detection_confidence=0.5, min_tracking_confidence = 0.5)
+mp_face_mesh = None
+face_mesh = None
 
 # drawing specifications for landmarks and connections
-mp_drawing = mp.solutions.drawing_utils
-drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+mp_drawing = None
+drawing_spec = None
+
+#IRIS indices
+RIGHT_IRIS = None
+LEFT_IRIS = None
+L_H_LEFT = None
+L_H_RIGHT =None
+R_H_LEFT = None
+R_H_RIGHT = None
+
+def initialize_globals():
+    global mp_face_mesh, face_mesh,mp_drawing,drawing_spec,RIGHT_IRIS,LEFT_IRIS, L_H_LEFT, L_H_RIGHT, R_H_LEFT,R_H_RIGHT
+    mp_face_mesh = mp.solutions.face_mesh
+    face_mesh = mp_face_mesh.FaceMesh(max_num_faces = 1,min_detection_confidence=0.5, min_tracking_confidence = 0.5,refine_landmarks=True)  ##modified here
+
+    # drawing specifications for landmarks and connections
+    mp_drawing = mp.solutions.drawing_utils
+    drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+
+    #IRIS indices
+    RIGHT_IRIS = [474,475,476,477]
+    LEFT_IRIS = [469,470,471,472]
+    L_H_LEFT = [33] # right eye right most mark
+    L_H_RIGHT = [133] # right eye left most mark
+    R_H_LEFT = [362] #left eye right most mark
+    R_H_RIGHT = [263] #left eye left most mark
 
 
 def initialize_camera():
@@ -159,11 +184,13 @@ def calculate_zone(face_landmarks, image):
 
             # checking where the user's head is tilting
             if y < -10:
-                text = "right"
+                # text = "right" #becuase the camera frame is mirrored
+                text = 'left' 
             # elif y < -15:
             #     text = "very_right"
             elif y > 10:
-                text = "left"
+                # text = "left" #because the camera frame is mirrored
+                text = 'right' 
             # elif y > 15:
             #     text = "very_left"
             elif x < -8:
@@ -178,3 +205,84 @@ def calculate_zone(face_landmarks, image):
 
             return success, x, y, z, radius, text, colour_zone, nose_2d, nose_3d 
     return False, None, None, None, None, None, None, None, None
+
+
+def euclidean_distance(point1, point2):
+    x1,y1 = point1.ravel()
+    x2,y2 = point2.ravel()
+    distance = math.sqrt((x2-x1)**2 + (y2-y1)**2)
+    return distance
+
+def iris_position(iris_center, right_point, left_point):
+    center_to_right_dist = euclidean_distance(iris_center, right_point)
+    total_distance = euclidean_distance(right_point, left_point)
+    ratio = center_to_right_dist / total_distance
+    iris_position = ""
+    if ratio <=0.42:
+        iris_position = "right"
+    elif 0.42<ratio<=0.57:
+        iris_position = 'center'
+    else:
+        iris_position = 'left'
+    return iris_position, ratio
+
+def getIris(face_landmarks, image):
+    img_h, img_w = image.shape[:2]
+    mesh_points = np.array([np.multiply([p.x,p.y],[img_w,img_h]).astype(int)for p in face_landmarks[0].landmark])
+    (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(mesh_points[LEFT_IRIS])
+    (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(mesh_points[RIGHT_IRIS])
+    center_left = np.array([l_cx,l_cy], dtype = np.int32)
+    center_right = np.array([r_cx, r_cy], dtype = np.int32)
+    llm = mesh_points[R_H_RIGHT][0]
+    lrm = mesh_points[R_H_LEFT][0]
+    iris_pos,ratio = iris_position(center_right, llm, lrm)
+    return iris_pos, ratio
+
+def face_pose(frame):
+    initialize_globals()
+    multi_face_landmarks = extract_face_landmarks(frame)
+    face_dict = None
+    if multi_face_landmarks:
+        success, x, y, z, radius, dir_text, colour_zone, nose_2d, nose_3d = calculate_zone(multi_face_landmarks, frame)
+        iris_pos, ratio = getIris(multi_face_landmarks, frame)
+        face_dict = {'success' : success,
+                     'x' : x,
+                     'y' : y,
+                     'z' : z,
+                     'radius' : radius,
+                     'dir_text' : dir_text,
+                     'colour_zone' : colour_zone,
+                     'nose_2d' : nose_2d,
+                     'nose_3d' : nose_3d,
+                     'iris_pos' : iris_pos,
+                     'ratio' : ratio}
+    return face_dict
+
+if __name__ == '__main__':
+    cap = cv2.VideoCapture(0)
+    while True:
+        ret, frame = cap.read()
+        frame = cv2.flip(frame,1)
+        
+        face_dict = face_pose(frame)
+    #     print(face_dict)
+        if face_dict:
+            print("level1")
+            if face_dict['success']:
+                print("level2")
+                dir_text = face_dict['dir_text']
+                radius = face_dict['radius']
+                colour_zone = face_dict['colour_zone']
+                iris_pos = face_dict['iris_pos']
+                eye_ratio = face_dict['ratio']
+                cv2.putText(frame, dir_text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1)
+                cv2.putText(frame, "radius: " + str(np.round(radius,2)), (300, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+                cv2.putText(frame, "zone: " + colour_zone, (300, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+                cv2.putText(frame, "eye_position: " + iris_pos, (300, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+                cv2.putText(frame, "ratio: " + str(np.round(eye_ratio,2)), (300, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+        cv2.imshow('Head Pose Estimation', frame)
+        if cv2.waitKey(100) & 0xFF == ord('q'):
+            break
+            
+    cap.release()
+    cv2.destroyAllWindows()
