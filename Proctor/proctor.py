@@ -39,7 +39,7 @@ def face_module(frame_path, target_path, yolo_model, media_pipe):
     outcome = DeepFace.verify(img1_path=target, img2_path=frame, model_name='ArcFace', detector_backend='mediapipe', normalization='ArcFace', align=False, enforce_detection = False)['verified']
     num_faces = numoffaces(frame)
     face_dict = face_pose(frame)
-    print(hand_dict)
+    #print(hand_dict)
     output = {}
     output['Identity'] = outcome
     output['Number of people'] = num_faces
@@ -68,10 +68,10 @@ def start(frame_path, target_path):
     target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
 
     outcome = DeepFace.verify(img1_path=target, img2_path=frame, model_name='ArcFace', detector_backend='mediapipe', normalization='ArcFace', align=False,  enforce_detection = False)['verified']
-    
+
     if outcome:
         cv2.imwrite(target_path, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)) ## this will be new target.png which will be tested
-    
+
     return outcome
 
 if __name__ == '__main__':
