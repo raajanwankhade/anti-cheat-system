@@ -3,6 +3,8 @@ from deepface import DeepFace
 import numpy as np
 from facial_landmarking_utils import face_pose
 from handpose import inference
+import torch
+import mediapipe as mp
 from cheat_prob import calculate_cheat_score
 
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
@@ -75,7 +77,16 @@ def start(frame_path, target_path):
     return outcome
 
 if __name__ == '__main__':
-    frame_path = '/home/kashyap/Documents/Projects/PROCTOR/anti-cheat-system/Proctor/images/verify.jpeg'
-    target_path = '/home/kashyap/Documents/Projects/PROCTOR/anti-cheat-system/Proctor/images/identity.jpeg'
-    result = face_module(frame_path, target_path)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = torch.hub.load('ultralytics/yolov5', 'custom', path='/home/shanveen-ortho-clinic/Documents/Projects/Proctor/anti-cheat-system/YOLO_weights/best.pt', force_reload=False).to(device)
+    mpHands = mp.solutions.hands
+    media_pipe_dict = {
+        'mpHands': mpHands,
+        'hands': mpHands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5, min_tracking_confidence=0.5),
+        'mpdraw': mp.solutions.drawing_utils
+    }
+
+    frame_path = '/home/shanveen-ortho-clinic/Documents/Projects/Proctor/anti-cheat-system/Proctor/Images/verify2.jpeg'
+    target_path = '/home/shanveen-ortho-clinic/Documents/Projects/Proctor/anti-cheat-system/Proctor/Images/identity.jpeg'
+    result = face_module(frame_path, target_path, yolo_model=model, media_pipe=media_pipe_dict)
     print(result)
